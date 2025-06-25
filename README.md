@@ -6,6 +6,7 @@ A professional network traffic shaping and monitoring solution with a modern web
 ![Traffic Shaper Dashboard](https://img.shields.io/badge/Status-Production%20Ready-green)
 ![Python](https://img.shields.io/badge/Python-3.8+-blue)
 ![React](https://img.shields.io/badge/React-18+-blue)
+![SystemD](https://img.shields.io/badge/SystemD-Auto--Start-orange)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 ## 🚀 Features
@@ -31,6 +32,14 @@ A professional network traffic shaping and monitoring solution with a modern web
 - **System Resources**: CPU and memory usage monitoring
 - **Network Testing**: Built-in ping and connectivity tests
 
+### Auto-Start & Service Management
+- **SystemD Integration**: Professional service management
+- **Auto-Start on Boot**: Automatically starts after system reboot/power loss
+- **Auto-Restart**: Services automatically restart on failure
+- **Service Dependencies**: Frontend waits for backend to be ready
+- **Easy Management**: Simple commands to control all services
+- **Logging Integration**: Full systemd journal logging
+
 ### User Interface
 - **Modern Web Dashboard**: Responsive React-based interface
 - **Real-time Updates**: Live data refresh without page reload
@@ -46,24 +55,25 @@ A professional network traffic shaping and monitoring solution with a modern web
 │   (Frontend)    │◄──►│   (Backend)      │◄──►│   (Traffic      │
 │   Port 3000     │    │   Port 8000      │    │   Control)      │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
-                              │
-                              ▼
-                       ┌──────────────────┐
-                       │   System Tools   │
-                       │   • tc (traffic) │
-                       │   • dnsmasq      │
-                       │   • iptables     │
-                       │   • /proc/net    │
-                       └──────────────────┘
+                              │                          │
+                              ▼                          ▼
+                       ┌──────────────────┐    ┌─────────────────┐
+                       │   SystemD        │    │   System Tools  │
+                       │   Services       │    │   • tc (traffic)│
+                       │   • Auto-start   │    │   • dnsmasq     │
+                       │   • Auto-restart │    │   • iptables    │
+                       │   • Logging      │    │   • /proc/net   │
+                       └──────────────────┘    └─────────────────┘
 ```
 
 ## 📋 Prerequisites
 
 - **Linux System** (Ubuntu 20.04+ recommended)
-- **Root/Sudo Access** (required for traffic control)
+- **Root/Sudo Access** (required for traffic control and service management)
 - **Python 3.8+**
 - **Node.js 16+** and npm
 - **Network Interfaces** (minimum 2 for router mode)
+- **SystemD** (for auto-start services)
 
 ### Required System Packages
 ```bash
@@ -76,7 +86,7 @@ sudo apt install -y iproute2 dnsmasq iptables-persistent
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/traffic-shaper.git
+git clone https://github.com/Mike-Nessim/traffic-shaper.git
 cd traffic-shaper
 ```
 
@@ -108,28 +118,97 @@ cp env.example .env
 # Edit .env with your network configuration
 ```
 
+### 5. Set Up Auto-Start Services (Recommended)
+```bash
+# Make service management script executable
+chmod +x manage-services.sh
+
+# Install and enable auto-start services
+./manage-services.sh enable
+
+# Start services
+./manage-services.sh start
+```
+
 ## 🚀 Quick Start
 
-### 1. Start the Backend (requires root)
+### Option A: Using Auto-Start Services (Recommended)
+
+```bash
+# Start both services
+./manage-services.sh start
+
+# Check status
+./manage-services.sh status
+
+# Test services
+./manage-services.sh test
+```
+
+Services will be available at:
+- **Frontend**: http://localhost:3000
+- **Backend**: http://localhost:8000
+
+### Option B: Manual Start
+
+#### 1. Start the Backend (requires root)
 ```bash
 cd backend
 source venv/bin/activate
 sudo python main.py
 ```
-Backend will be available at `http://localhost:8000`
 
-### 2. Start the Frontend
+#### 2. Start the Frontend
 ```bash
 cd ui
 npm start
 ```
-Frontend will be available at `http://localhost:3000`
 
 ### 3. Access the Dashboard
 1. Open `http://localhost:3000` in your browser
 2. Login with default credentials (admin/admin)
 3. Configure your network interfaces
 4. Start shaping traffic!
+
+## ⚙️ Service Management
+
+### Quick Service Commands
+```bash
+./manage-services.sh start     # Start both services
+./manage-services.sh stop      # Stop both services  
+./manage-services.sh restart   # Restart both services
+./manage-services.sh status    # Show service status
+./manage-services.sh test      # Test if services respond
+./manage-services.sh logs      # View service logs
+./manage-services.sh enable    # Enable auto-start on boot
+./manage-services.sh disable   # Disable auto-start
+```
+
+### Manual SystemD Commands
+```bash
+# Backend service
+sudo systemctl start traffic-shaper-backend.service
+sudo systemctl stop traffic-shaper-backend.service
+sudo systemctl status traffic-shaper-backend.service
+sudo systemctl enable traffic-shaper-backend.service
+
+# Frontend service
+sudo systemctl start traffic-shaper-frontend.service
+sudo systemctl stop traffic-shaper-frontend.service
+sudo systemctl status traffic-shaper-frontend.service
+sudo systemctl enable traffic-shaper-frontend.service
+
+# View logs
+sudo journalctl -u traffic-shaper-backend.service -f
+sudo journalctl -u traffic-shaper-frontend.service -f
+```
+
+### Auto-Start Features
+- ✅ **Boot Integration**: Services start automatically after system boot
+- ✅ **Crash Recovery**: Services restart automatically if they fail
+- ✅ **Dependency Management**: Frontend waits for backend to be ready
+- ✅ **Logging**: Full systemd journal integration
+- ✅ **Security**: Proper user permissions and capabilities
 
 ## 📖 Usage Guide
 
@@ -185,6 +264,13 @@ ADMIN_PASSWORD=your-secure-password
 - **Latency**: 0 - 10000 ms
 - **Interfaces**: Any valid Linux network interface
 
+### Service Configuration
+The system includes pre-configured systemd service files:
+- `backend/traffic-shaper-backend.service` - Backend API service
+- `ui/traffic-shaper-frontend.service` - Frontend React service
+- `backend/start-backend.sh` - Backend startup script
+- `ui/start-frontend.sh` - Frontend startup script
+
 ## 🔍 API Documentation
 
 ### Backend Endpoints
@@ -195,6 +281,7 @@ ADMIN_PASSWORD=your-secure-password
 - `GET /traffic` - Real-time traffic statistics
 - `GET /dhcp/clients` - Connected DHCP clients
 - `POST /ping` - Network connectivity test
+- `GET /api` - API root endpoint
 
 ### Frontend Routes
 - `/` - Main dashboard
@@ -231,10 +318,17 @@ npm run build
 2. **Frontend**: Create components in `src/components/`
 3. **Styling**: Update `Components.css`
 4. **Navigation**: Modify `Dashboard.js`
+5. **Services**: Update service files if needed
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
+
+**Services not starting:**
+- Check service status: `./manage-services.sh status`
+- View logs: `./manage-services.sh logs`
+- Verify permissions: `sudo chmod -R 755 /home/devonics/traffic-shapper/`
+- Restart services: `./manage-services.sh restart`
 
 **Traffic shaping not working:**
 - Ensure running as root/sudo
@@ -248,12 +342,12 @@ npm run build
 - Ensure no conflicts with existing DHCP servers
 
 **Frontend can't connect to backend:**
-- Verify backend is running on port 8000
+- Verify backend is running: `curl http://localhost:8000/api`
 - Check firewall settings
 - Ensure correct proxy configuration
 
 **Permission errors:**
-- Run backend with sudo
+- Run backend with sudo or use systemd service
 - Check file permissions
 - Verify user is in appropriate groups
 
@@ -273,6 +367,23 @@ sudo cat /var/lib/dhcp/dhcpd.leases
 
 # Check system logs
 journalctl -f
+
+# Service-specific logs
+sudo journalctl -u traffic-shaper-backend.service -f
+sudo journalctl -u traffic-shaper-frontend.service -f
+```
+
+### Service Management
+```bash
+# Check if services are enabled for auto-start
+sudo systemctl is-enabled traffic-shaper-backend.service
+sudo systemctl is-enabled traffic-shaper-frontend.service
+
+# View service dependencies
+sudo systemctl list-dependencies traffic-shaper-frontend.service
+
+# Reset failed services
+sudo systemctl reset-failed
 ```
 
 ## 🔒 Security Considerations
@@ -283,6 +394,7 @@ journalctl -f
 - **Restrict network access** to management interface
 - **Regular security updates** for system packages
 - **Monitor logs** for suspicious activity
+- **Service isolation** with systemd security features
 
 ## 📊 Performance
 
@@ -297,6 +409,7 @@ journalctl -f
 - Handles 100+ concurrent DHCP clients
 - Real-time monitoring with minimal overhead
 - Efficient traffic control with Linux TC
+- Auto-restart ensures high availability
 
 ## 🤝 Contributing
 
@@ -312,22 +425,42 @@ journalctl -f
 - Add tests for new features
 - Update documentation
 - Ensure backward compatibility
+- Test service integration
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the (https://opensource.org/license/mit) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
 - **Linux Traffic Control (tc)** - Core traffic shaping functionality
 - **FastAPI** - Modern Python web framework
 - **React** - Frontend user interface
+- **SystemD** - Service management and auto-start
 - **dnsmasq** - DHCP server implementation
 - **Lucide React** - Beautiful icons
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/mike-nessim/traffic-shaper/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/traffic-shaper/discussions)
-- **Documentation**: [Wiki](https://github.com/mike-nessim/traffic-shaper/wiki)
+- **Issues**: [GitHub Issues](https://github.com/Mike-Nessim/traffic-shaper/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Mike-Nessim/traffic-shaper/discussions)
+- **Documentation**: [Wiki](https://github.com/Mike-Nessim/traffic-shaper/wiki)
+
+## 🗺️ Roadmap
+
+- [ ] **Advanced QoS**: Priority queues and traffic classes
+- [ ] **Bandwidth Scheduling**: Time-based traffic rules
+- [ ] **User Management**: Multi-user access control
+- [ ] **API Authentication**: JWT token-based auth
+- [ ] **Database Integration**: Persistent configuration storage
+- [ ] **Docker Support**: Containerized deployment
+- [ ] **Grafana Integration**: Advanced monitoring dashboards
+- [ ] **Mobile App**: Native mobile interface
+- [ ] **Web UI Production Build**: Optimized frontend deployment
+- [ ] **SSL/TLS Support**: HTTPS encryption
+- [ ] **Backup/Restore**: Configuration backup system
+
+---
+
+**Made with ❤️ for network engineers and system administrators**
 

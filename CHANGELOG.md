@@ -5,6 +5,64 @@ All notable changes to the Traffic Shaper Control Panel project will be document
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2024-01-XX
+
+### Added
+- **Auto-Start Service Management**
+  - SystemD service integration for production deployment
+  - Auto-start on system boot and after power loss
+  - Auto-restart on service failure with 10-second delay
+  - Service dependency management (frontend waits for backend)
+  - Professional service management with proper user permissions
+
+- **Service Management Tools**
+  - `manage-services.sh` script for easy service control
+  - Comprehensive service status monitoring
+  - Service log viewing and debugging tools
+  - Service testing and health checks
+  - Enable/disable auto-start functionality
+
+- **SystemD Integration**
+  - `traffic-shaper-backend.service` - Backend API service
+  - `traffic-shaper-frontend.service` - Frontend React service
+  - Proper security settings and capabilities
+  - SystemD journal logging integration
+  - Service isolation and protection
+
+- **Startup Scripts**
+  - `backend/start-backend.sh` - Robust backend startup
+  - `ui/start-frontend.sh` - Frontend startup with environment
+  - Virtual environment activation handling
+  - Environment variable management
+  - Error handling and logging
+
+### Enhanced
+- **Documentation Updates**
+  - Comprehensive service management documentation
+  - Auto-start setup instructions
+  - Troubleshooting guide for services
+  - SystemD command reference
+  - Service debugging procedures
+
+- **Reliability Improvements**
+  - Services survive system reboots and power outages
+  - Automatic recovery from crashes
+  - Proper permission handling for root services
+  - Enhanced error logging and monitoring
+
+### Technical Improvements
+- **Service Architecture**
+  - Backend runs as root with network capabilities
+  - Frontend runs as user with restricted permissions
+  - Proper working directory and environment setup
+  - Service dependency chain management
+
+- **Security Enhancements**
+  - Minimal privilege principle for services
+  - Proper capability bounding for network operations
+  - Service isolation with systemd security features
+  - Protected system and home directories
+
 ## [1.0.0] - 2024-01-XX
 
 ### Added
@@ -117,16 +175,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker containerization
 - Grafana dashboard integration
 - Mobile application
+- Web UI production build optimization
+- SSL/TLS support for HTTPS
+- Configuration backup and restore system
 
 ### Known Issues
-- Harmless TC qdisc deletion errors in logs
-- Some ESLint warnings for unused imports
-- Proxy connection errors when backend is restarting
+- Some ESLint warnings for unused imports (non-functional)
+- Development server warnings (harmless)
 
 ---
 
 ## Version History
 
+- **v1.1.0** - Auto-start services and production deployment features
 - **v1.0.0** - Initial release with full traffic shaping and monitoring capabilities
 - **v0.9.0** - Beta release with core functionality
 - **v0.8.0** - Alpha release with basic traffic shaping
