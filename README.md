@@ -1,4 +1,5 @@
 # Traffic Shaper Control Panel
+# Author: Mike Nessim mikenessim@devonics.com
 
 A professional network traffic shaping and monitoring solution with a modern web interface. This system allows you to control network bandwidth, add latency, and monitor real-time traffic statistics on Linux systems.
 
@@ -314,7 +315,7 @@ journalctl -f
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the (https://opensource.org/license/mit) file for details.
 
 ## 🙏 Acknowledgments
 
@@ -326,21 +327,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/traffic-shaper/issues)
+- **Issues**: [GitHub Issues](https://github.com/mike-nessim/traffic-shaper/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/yourusername/traffic-shaper/discussions)
-- **Documentation**: [Wiki](https://github.com/yourusername/traffic-shaper/wiki)
+- **Documentation**: [Wiki](https://github.com/mike-nessim/traffic-shaper/wiki)
 
-## 🗺️ Roadmap
-
-- [ ] **Advanced QoS**: Priority queues and traffic classes
-- [ ] **Bandwidth Scheduling**: Time-based traffic rules
-- [ ] **User Management**: Multi-user access control
-- [ ] **API Authentication**: JWT token-based auth
-- [ ] **Database Integration**: Persistent configuration storage
-- [ ] **Docker Support**: Containerized deployment
-- [ ] **Grafana Integration**: Advanced monitoring dashboards
-- [ ] **Mobile App**: Native mobile interface
-
----
-
-**Made with ❤️ for network engineers and system administrators** 
