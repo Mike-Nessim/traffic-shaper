@@ -444,23 +444,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Issues**: [GitHub Issues](https://github.com/Mike-Nessim/traffic-shaper/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/Mike-Nessim/traffic-shaper/discussions)
-- **Documentation**: [Wiki](https://github.com/Mike-Nessim/traffic-shaper/wiki)
 
-## 🗺️ Roadmap
-
-- [ ] **Advanced QoS**: Priority queues and traffic classes
-- [ ] **Bandwidth Scheduling**: Time-based traffic rules
-- [ ] **User Management**: Multi-user access control
-- [ ] **API Authentication**: JWT token-based auth
-- [ ] **Database Integration**: Persistent configuration storage
-- [ ] **Docker Support**: Containerized deployment
-- [ ] **Grafana Integration**: Advanced monitoring dashboards
-- [ ] **Mobile App**: Native mobile interface
-- [ ] **Web UI Production Build**: Optimized frontend deployment
-- [ ] **SSL/TLS Support**: HTTPS encryption
-- [ ] **Backup/Restore**: Configuration backup system
-
----
-
-**Made with ❤️ for network engineers and system administrators**
 
