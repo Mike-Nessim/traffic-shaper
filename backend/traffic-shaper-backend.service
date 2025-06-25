@@ -1,0 +1,31 @@
+[Unit]
+Description=Traffic Shaper Backend API Server
+Documentation=https://github.com/Mike-Nessim/traffic-shaper
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/home/devonics/traffic-shapper/backend
+ExecStart=/home/devonics/traffic-shapper/backend/start-backend.sh
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=traffic-shaper-backend
+
+# Security settings
+NoNewPrivileges=false
+PrivateTmp=true
+ProtectSystem=false
+ProtectHome=false
+
+# Network capabilities (required for traffic control)
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW CAP_SYS_ADMIN
+
+[Install]
+WantedBy=multi-user.target 

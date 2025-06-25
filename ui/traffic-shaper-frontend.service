@@ -1,0 +1,30 @@
+[Unit]
+Description=Traffic Shaper Frontend React Server
+Documentation=https://github.com/Mike-Nessim/traffic-shaper
+After=network.target traffic-shaper-backend.service
+Wants=traffic-shaper-backend.service
+
+[Service]
+Type=simple
+User=devonics
+Group=devonics
+WorkingDirectory=/home/devonics/traffic-shapper/ui
+Environment=NODE_ENV=development
+Environment=BROWSER=none
+ExecStart=/home/devonics/traffic-shapper/ui/start-frontend.sh
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=traffic-shaper-frontend
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/home/devonics/traffic-shapper/ui
+
+[Install]
+WantedBy=multi-user.target 
