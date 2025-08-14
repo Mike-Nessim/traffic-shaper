@@ -1,7 +1,7 @@
 # Traffic Shaper Control Panel
-# Author: Mike Nessim mikenessim@devonics.com
+**Author: Mike Nessim mikenessim@devonics.com**
 
-A professional network traffic shaping and monitoring solution with a modern web interface. This system allows you to control network bandwidth, add latency, and monitor real-time traffic statistics on Linux systems.
+A professional network traffic shaping and monitoring solution with a modern web interface. Control bandwidth, add latency, and monitor traffic in real-time with an intuitive dashboard. Features automatic network configuration, DHCP server, and one-command installation.
 
 ![Traffic Shaper Dashboard](https://img.shields.io/badge/Status-Production%20Ready-green)
 ![Python](https://img.shields.io/badge/Python-3.8+-blue)
@@ -68,147 +68,85 @@ A professional network traffic shaping and monitoring solution with a modern web
 
 ## 📋 Prerequisites
 
-- **Linux System** (Ubuntu 20.04+ recommended)
-- **Root/Sudo Access** (required for traffic control and service management)
-- **Python 3.8+**
-- **Node.js 16+** and npm
-- **Network Interfaces** (minimum 2 for router mode)
-- **SystemD** (for auto-start services)
+- **Ubuntu 18.04+** or **Debian 10+**
+- **Root/Sudo Access** (required for installation)
+- **2+ Network Interfaces** (recommended for traffic shaping)
+- **2GB+ RAM** and **1GB+ free disk space**
 
-### Required System Packages
+*All dependencies are automatically installed by the installer*
+
+## 🚀 Quick Installation
+
+### One-Command Install
 ```bash
-sudo apt update
-sudo apt install -y python3 python3-pip python3-venv nodejs npm
-sudo apt install -y iproute2 dnsmasq iptables-persistent
+# Download and run the installer
+curl -fsSL https://raw.githubusercontent.com/Mike-Nessim/traffic-shaper/main/install.sh | sudo bash
 ```
 
-## 🛠️ Installation
-
-### 1. Clone the Repository
+### Or Manual Installation
 ```bash
+# Clone the repository
 git clone https://github.com/Mike-Nessim/traffic-shaper.git
 cd traffic-shaper
+
+# Run the installer
+sudo ./install.sh
 ```
 
-### 2. Backend Setup
-```bash
-cd backend
-chmod +x install.sh
-./install.sh
-```
+### Installation Complete!
+After installation, access your traffic shaper at: **http://172.22.22.1**
 
-Or manually:
-```bash
-cd backend
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
+The installer automatically:
+- ✅ Checks system compatibility
+- ✅ Installs all dependencies 
+- ✅ Configures network interfaces
+- ✅ Sets up DHCP server
+- ✅ Creates system services
+- ✅ Starts the application
 
-### 3. Frontend Setup
-```bash
-cd ../ui
-npm install
-```
-
-### 4. Configuration
-```bash
-cd ../backend
-cp env.example .env
-# Edit .env with your network configuration
-```
-
-### 5. Set Up Auto-Start Services (Recommended)
-```bash
-# Make service management script executable
-chmod +x manage-services.sh
-
-# Install and enable auto-start services
-./manage-services.sh enable
-
-# Start services
-./manage-services.sh start
-```
-
-## 🚀 Quick Start
-
-### Option A: Using Auto-Start Services (Recommended)
+## 🗑️ Uninstall
 
 ```bash
-# Start both services
-./manage-services.sh start
-
-# Check status
-./manage-services.sh status
-
-# Test services
-./manage-services.sh test
+sudo ./install.sh --uninstall
 ```
 
-Services will be available at:
-- **Frontend**: http://localhost:3000
-- **Backend**: http://localhost:8000
+## 🎯 Getting Started
 
-### Option B: Manual Start
+After installation, the Traffic Shaper is ready to use:
 
-#### 1. Start the Backend (requires root)
-```bash
-cd backend
-source venv/bin/activate
-sudo python main.py
-```
+1. **Open your web browser** and go to: **http://172.22.22.1**
+2. **Configure traffic limits** in the "Traffic Controls" tab
+3. **Monitor real-time traffic** in the "Monitoring" tab  
+4. **View connected devices** in the "Connected Clients" tab
 
-#### 2. Start the Frontend
-```bash
-cd ui
-npm start
-```
-
-### 3. Access the Dashboard
-1. Open `http://localhost:3000` in your browser
-2. Login with default credentials (admin/admin)
-3. Configure your network interfaces
-4. Start shaping traffic!
+### System Architecture
+- **Input Interface**: First ethernet port (client connections)
+- **Output Interface**: Second ethernet port (internet connection) 
+- **DHCP Server**: Automatically serves IPs to connected devices
+- **Traffic Shaping**: Controls bandwidth between input ↔ output
 
 ## ⚙️ Service Management
 
-### Quick Service Commands
+### SystemD Commands
 ```bash
-./manage-services.sh start     # Start both services
-./manage-services.sh stop      # Stop both services  
-./manage-services.sh restart   # Restart both services
-./manage-services.sh status    # Show service status
-./manage-services.sh test      # Test if services respond
-./manage-services.sh logs      # View service logs
-./manage-services.sh enable    # Enable auto-start on boot
-./manage-services.sh disable   # Disable auto-start
-```
+# Check service status
+sudo systemctl status traffic-shaper-backend
+sudo systemctl status traffic-shaper-frontend
 
-### Manual SystemD Commands
-```bash
-# Backend service
-sudo systemctl start traffic-shaper-backend.service
-sudo systemctl stop traffic-shaper-backend.service
-sudo systemctl status traffic-shaper-backend.service
-sudo systemctl enable traffic-shaper-backend.service
-
-# Frontend service
-sudo systemctl start traffic-shaper-frontend.service
-sudo systemctl stop traffic-shaper-frontend.service
-sudo systemctl status traffic-shaper-frontend.service
-sudo systemctl enable traffic-shaper-frontend.service
+# Restart services
+sudo systemctl restart traffic-shaper-backend
+sudo systemctl restart traffic-shaper-frontend
 
 # View logs
-sudo journalctl -u traffic-shaper-backend.service -f
-sudo journalctl -u traffic-shaper-frontend.service -f
+sudo journalctl -u traffic-shaper-backend -f
+sudo journalctl -u traffic-shaper-frontend -f
 ```
 
 ### Auto-Start Features
-- ✅ **Boot Integration**: Services start automatically after system boot
-- ✅ **Crash Recovery**: Services restart automatically if they fail
-- ✅ **Dependency Management**: Frontend waits for backend to be ready
-- ✅ **Logging**: Full systemd journal integration
-- ✅ **Security**: Proper user permissions and capabilities
+- ✅ **Auto-start on boot**: Services automatically start after system reboot
+- ✅ **Auto-restart on failure**: Services restart if they crash
+- ✅ **Dependency management**: Frontend waits for backend to be ready
+- ✅ **Professional logging**: Full systemd journal integration
 
 ## 📖 Usage Guide
 
@@ -238,55 +176,31 @@ sudo journalctl -u traffic-shaper-frontend.service -f
 
 ## 🔧 Configuration
 
-### Network Interfaces
-The system requires two network interfaces:
-- **Input Interface**: Connected to test devices (e.g., `enp1s0`)
-- **Output Interface**: Connected to internet/router (e.g., `enp3s0`)
+### Automatic Network Setup
+The installer automatically configures:
+- **Input Interface**: First ethernet interface (for client connections)
+- **Output Interface**: Second ethernet interface (172.22.22.1/24)
+- **DHCP Server**: Serves IPs 172.22.22.10-100 to connected devices
+- **Traffic Shaping**: Controls bandwidth between input ↔ output interfaces
 
-### Environment Variables
-Create `.env` file in backend directory:
-```bash
-# Network Configuration
-INPUT_INTERFACE=enp1s0
-OUTPUT_INTERFACE=enp3s0
-DHCP_RANGE_START=192.168.100.10
-DHCP_RANGE_END=192.168.100.100
-GATEWAY_IP=192.168.100.1
+### Manual Configuration (if needed)
+Access the web interface to customize:
+- **Network Interface IPs**: "Network Interfaces" tab
+- **Traffic Limits**: "Traffic Controls" tab
+- **DHCP Settings**: Automatically follows output interface subnet
 
-# Security
-SECRET_KEY=your-secret-key-here
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=your-secure-password
-```
+## 🔍 Web Interface
 
-### Traffic Control Parameters
-- **Bandwidth**: 0.1 - 1000 Mbps
-- **Latency**: 0 - 10000 ms
-- **Interfaces**: Any valid Linux network interface
+### Dashboard Tabs
+- **Traffic Controls**: Set bandwidth limits and latency
+- **System Status**: View system resources and interface status  
+- **Network Interfaces**: Manage IP addresses and interface configuration
+- **Connected Clients**: View DHCP clients and lease information
+- **Monitoring**: Real-time traffic graphs and statistics
 
-### Service Configuration
-The system includes pre-configured systemd service files:
-- `backend/traffic-shaper-backend.service` - Backend API service
-- `ui/traffic-shaper-frontend.service` - Frontend React service
-- `backend/start-backend.sh` - Backend startup script
-- `ui/start-frontend.sh` - Frontend startup script
-
-## 🔍 API Documentation
-
-### Backend Endpoints
-- `GET /status` - System status and interfaces
-- `GET /config` - Current traffic shaping configuration
-- `POST /config` - Update traffic shaping settings
-- `GET /interfaces` - Network interface information
-- `GET /traffic` - Real-time traffic statistics
-- `GET /dhcp/clients` - Connected DHCP clients
-- `POST /ping` - Network connectivity test
-- `GET /api` - API root endpoint
-
-### Frontend Routes
-- `/` - Main dashboard
-- `/login` - Authentication page
-- Tabs: Controls, Status, Interfaces, Clients, Monitoring
+### API Endpoints
+- Backend API available at: **http://172.22.22.1:8000**
+- Interactive API docs: **http://172.22.22.1:8000/docs**
 
 ## 🛠️ Development
 
@@ -322,69 +236,41 @@ npm run build
 
 ## 🐛 Troubleshooting
 
+### Quick Diagnostics
+```bash
+# Check service status
+sudo systemctl status traffic-shaper-backend traffic-shaper-frontend
+
+# View recent logs
+sudo journalctl -u traffic-shaper-backend --since "5 minutes ago"
+sudo journalctl -u traffic-shaper-frontend --since "5 minutes ago"
+
+# Test API connectivity
+curl http://172.22.22.1:8000/api
+curl http://172.22.22.1
+```
+
 ### Common Issues
 
-**Services not starting:**
-- Check service status: `./manage-services.sh status`
-- View logs: `./manage-services.sh logs`
-- Verify permissions: `sudo chmod -R 755 /home/devonics/traffic-shapper/`
-- Restart services: `./manage-services.sh restart`
+**Can't access web interface:**
+- Verify services are running: `sudo systemctl status traffic-shaper-*`
+- Check if port 80 is free: `sudo ss -tlnp | grep :80`
+- Restart services: `sudo systemctl restart traffic-shaper-*`
 
 **Traffic shaping not working:**
-- Ensure running as root/sudo
-- Check network interface names
-- Verify tc (traffic control) is installed
-- Check iptables rules and IP forwarding
+- Ensure network interfaces are properly detected
+- Check interface names in "Network Interfaces" tab
+- Verify tc (traffic control) is available: `tc --version`
 
-**DHCP not assigning IPs:**
-- Verify dnsmasq configuration
-- Check interface IP configuration
-- Ensure no conflicts with existing DHCP servers
+**DHCP not working:**
+- Check dnsmasq status: `sudo systemctl status dnsmasq`
+- Verify output interface IP: `ip addr show`
+- Check DHCP leases: `sudo cat /var/lib/dhcp/dnsmasq.leases`
 
-**Frontend can't connect to backend:**
-- Verify backend is running: `curl http://localhost:8000/api`
-- Check firewall settings
-- Ensure correct proxy configuration
-
-**Permission errors:**
-- Run backend with sudo or use systemd service
-- Check file permissions
-- Verify user is in appropriate groups
-
-### Debug Commands
-```bash
-# Check traffic control rules
-sudo tc qdisc show
-sudo tc class show dev enp3s0
-sudo tc filter show dev enp3s0
-
-# Check network interfaces
-ip addr show
-ip route show
-
-# Check DHCP leases
-sudo cat /var/lib/dhcp/dhcpd.leases
-
-# Check system logs
-journalctl -f
-
-# Service-specific logs
-sudo journalctl -u traffic-shaper-backend.service -f
-sudo journalctl -u traffic-shaper-frontend.service -f
-```
-
-### Service Management
-```bash
-# Check if services are enabled for auto-start
-sudo systemctl is-enabled traffic-shaper-backend.service
-sudo systemctl is-enabled traffic-shaper-frontend.service
-
-# View service dependencies
-sudo systemctl list-dependencies traffic-shaper-frontend.service
-
-# Reset failed services
-sudo systemctl reset-failed
-```
+**Installation issues:**
+- Re-run installer: `sudo ./install.sh`
+- Check installation log: `sudo cat /var/log/traffic-shaper-install.log`
+- Ensure running on supported OS: Ubuntu 18.04+ or Debian 10+
 
 ## 🔒 Security Considerations
 
@@ -413,19 +299,11 @@ sudo systemctl reset-failed
 
 ## 🤝 Contributing
 
-1. **Fork the repository**
-2. **Create feature branch** (`git checkout -b feature/amazing-feature`)
-3. **Commit changes** (`git commit -m 'Add amazing feature'`)
-4. **Push to branch** (`git push origin feature/amazing-feature`)
-5. **Open Pull Request**
-
-### Development Guidelines
-- Follow PEP 8 for Python code
-- Use ESLint for JavaScript code
-- Add tests for new features
-- Update documentation
-- Ensure backward compatibility
-- Test service integration
+1. Fork the repository
+2. Create feature branch: `git checkout -b feature/amazing-feature`
+3. Commit changes: `git commit -m 'Add amazing feature'`  
+4. Push to branch: `git push origin feature/amazing-feature`
+5. Open Pull Request
 
 ## 📝 License
 
@@ -448,17 +326,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🗺️ Roadmap
 
-- [ ] **Advanced QoS**: Priority queues and traffic classes
-- [ ] **Bandwidth Scheduling**: Time-based traffic rules
-- [ ] **User Management**: Multi-user access control
-- [ ] **API Authentication**: JWT token-based auth
-- [ ] **Database Integration**: Persistent configuration storage
-- [ ] **Docker Support**: Containerized deployment
-- [ ] **Grafana Integration**: Advanced monitoring dashboards
-- [ ] **Mobile App**: Native mobile interface
-- [ ] **Web UI Production Build**: Optimized frontend deployment
-- [ ] **SSL/TLS Support**: HTTPS encryption
-- [ ] **Backup/Restore**: Configuration backup system
+- [ ] Advanced QoS with priority queues
+- [ ] Time-based bandwidth scheduling  
+- [ ] User authentication and management
+- [ ] Docker containerization
+- [ ] HTTPS/SSL support
+- [ ] Configuration backup/restore
+- [ ] Mobile app interface
 
 ---
 
