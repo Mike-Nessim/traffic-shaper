@@ -277,8 +277,8 @@ EOF
     # Apply netplan configuration
     netplan apply
     
-    # Configure dnsmasq for DHCP server
-    info "Configuring DHCP server on $OUTPUT_INTERFACE"
+    # Configure dnsmasq for DHCP server on OUTPUT interface
+    info "Configuring DHCP server on OUTPUT interface $OUTPUT_INTERFACE (second ethernet)"
     
     # Stop conflicting services
     systemctl stop isc-dhcp-server 2>/dev/null || true
@@ -446,7 +446,7 @@ show_completion_info() {
     echo -e "${BLUE}🔧 Backend API:${NC} http://$DEFAULT_OUTPUT_IP:8000"
     echo -e "${BLUE}📡 Input Interface:${NC} $INPUT_INTERFACE (DHCP/configurable)"
     echo -e "${BLUE}📤 Output Interface:${NC} $OUTPUT_INTERFACE ($DEFAULT_OUTPUT_IP/24 - Static)"
-    echo -e "${BLUE}🌍 DHCP Server:${NC} Active (172.22.22.10-100)"
+    echo -e "${BLUE}🌍 DHCP Server:${NC} Active on OUTPUT interface (172.22.22.10-100)"
     echo ""
     echo -e "${YELLOW}📋 Services Status:${NC}"
     echo -e "  ✅ traffic-shaper-backend: $(systemctl is-active traffic-shaper-backend)"
