@@ -1,5 +1,5 @@
 # Traffic Shaper Control Panel
-**Author: Mike Nessim mikenessim@devonics.com**
+**Author: Mike Nessim mikenessim@axtonrobotics.com**
 
 A professional network traffic shaping and monitoring solution with a modern web interface. Control bandwidth, add latency, and monitor traffic in real-time with an intuitive dashboard. Features automatic network configuration, DHCP server, and one-command installation.
 
