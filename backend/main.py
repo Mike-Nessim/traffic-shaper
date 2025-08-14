@@ -19,7 +19,11 @@ from utils import (
     validate_interface_name, validate_delay, validate_bandwidth,
     check_interface_connectivity, get_available_interfaces,
     check_root_privileges, check_tc_availability, get_system_info,
-    ping_test, format_bandwidth, format_delay
+    ping_test, format_bandwidth, format_delay,
+    validate_ip_address, validate_subnet_mask, get_first_ethernet_interface,
+    get_second_ethernet_interface, get_ethernet_interfaces,
+    apply_static_ip, remove_static_ip, get_interface_config, get_interface_ip,
+    update_dhcp_config_for_ip
 )
 import datetime
 import re
@@ -57,6 +61,12 @@ class TrafficShapingConfig(BaseModel):
 class PingRequest(BaseModel):
     host: str = "8.8.8.8"
     count: int = 4
+
+class StaticIPConfig(BaseModel):
+    interface: str
+    ip_address: str
+    netmask: str = "255.255.255.0"
+    gateway: Optional[str] = None
 
 class SystemStatus(BaseModel):
     interfaces: Dict[str, Any]
@@ -425,7 +435,7 @@ def parse_dhcp_leases():
     
     # Parse dnsmasq leases
     if dnsmasq_running:
-        lease_file = "/var/lib/misc/dnsmasq.leases"
+        lease_file = "/var/lib/dhcp/dnsmasq.leases"
         try:
             with open(lease_file, 'r') as f:
                 for line in f:
@@ -527,8 +537,8 @@ async def get_dhcp_status():
                 'config_file': '/etc/dhcp/dhcpd.conf',
                 'lease_file': '/var/lib/dhcp/dhcpd.leases',
                 'interface': 'enp1s0',
-                'subnet': '192.168.100.0/24',
-                'range': '192.168.100.10 - 192.168.100.100'
+                'subnet': '172.22.22.0/24',
+                'range': '172.22.22.10 - 172.22.22.100'
             }
             
             # Get additional stats from systemctl
@@ -542,14 +552,41 @@ async def get_dhcp_status():
                         break
         
         elif dnsmasq_running:
+            # Read actual dnsmasq configuration
+            interface = 'enp1s0'  # default
+            dhcp_range = 'Not configured'
+            subnet = 'Unknown'
+            
+            try:
+                with open('/etc/dnsmasq.conf', 'r') as f:
+                    config_content = f.read()
+                
+                # Parse interface
+                interface_match = re.search(r'^interface=(.+)$', config_content, re.MULTILINE)
+                if interface_match:
+                    interface = interface_match.group(1)
+                
+                # Parse DHCP range
+                range_match = re.search(r'^dhcp-range=([^,]+),([^,]+),([^,]+),', config_content, re.MULTILINE)
+                if range_match:
+                    start_ip, end_ip, netmask = range_match.groups()
+                    dhcp_range = f"{start_ip} - {end_ip}"
+                    
+                    # Calculate subnet from start IP and netmask
+                    import ipaddress
+                    network = ipaddress.IPv4Network(f"{start_ip}/{netmask}", strict=False)
+                    subnet = str(network)
+            except Exception as e:
+                logger.error(f"Error reading dnsmasq config: {e}")
+            
             stats = {
                 'running': True,
                 'server_type': 'dnsmasq',
                 'config_file': '/etc/dnsmasq.conf',
-                'lease_file': '/var/lib/misc/dnsmasq.leases',
-                'interface': 'enp1s0',
-                'subnet': '192.168.100.0/24',
-                'range': '192.168.100.10 - 192.168.100.100'
+                'lease_file': '/var/lib/dhcp/dnsmasq.leases',
+                'interface': interface,
+                'subnet': subnet,
+                'range': dhcp_range
             }
             
             # Get additional stats from systemctl
@@ -592,7 +629,7 @@ async def restart_dhcp_server():
         dnsmasq_running = result.returncode == 0 and result.stdout.strip() == 'active'
         
         if isc_running:
-            result = subprocess.run(['sudo', 'systemctl', 'restart', 'isc-dhcp-server'], 
+            result = subprocess.run(['systemctl', 'restart', 'isc-dhcp-server'], 
                                   capture_output=True, text=True)
             if result.returncode == 0:
                 return {"success": True, "message": "ISC DHCP server restarted successfully"}
@@ -600,7 +637,7 @@ async def restart_dhcp_server():
                 return {"success": False, "message": f"Failed to restart ISC DHCP server: {result.stderr}"}
         
         elif dnsmasq_running:
-            result = subprocess.run(['sudo', 'systemctl', 'restart', 'dnsmasq'], 
+            result = subprocess.run(['systemctl', 'restart', 'dnsmasq'], 
                                   capture_output=True, text=True)
             if result.returncode == 0:
                 return {"success": True, "message": "dnsmasq DHCP server restarted successfully"}
@@ -616,6 +653,126 @@ async def restart_dhcp_server():
 @app.get("/api")
 async def api_root():
     return {"message": "API root"}
+
+@app.get("/api/network/interfaces")
+async def get_network_interfaces_detailed():
+    """Get detailed information about all network interfaces"""
+    interfaces = {}
+    for interface in get_available_interfaces():
+        interfaces[interface] = get_interface_config(interface)
+    
+    ethernet_interfaces = get_ethernet_interfaces()
+    return {
+        'interfaces': interfaces,
+        'first_ethernet': get_first_ethernet_interface(),
+        'input_interface': ethernet_interfaces.get('input'),
+        'output_interface': ethernet_interfaces.get('output')
+    }
+
+@app.get("/api/network/interface/{interface}")
+async def get_interface_detail(interface: str):
+    """Get detailed information about a specific interface"""
+    if not validate_interface_name(interface):
+        raise HTTPException(status_code=404, detail=f"Interface {interface} not found")
+    
+    return get_interface_config(interface)
+
+@app.post("/api/network/static-ip")
+async def set_static_ip(config: StaticIPConfig):
+    """Set static IP configuration for an interface"""
+    try:
+        success, message = apply_static_ip(
+            config.interface, 
+            config.ip_address, 
+            config.netmask, 
+            config.gateway
+        )
+        
+        if not success:
+            raise HTTPException(status_code=400, detail=message)
+        
+        # If this is the output interface, update DHCP configuration
+        ethernet_interfaces = get_ethernet_interfaces()
+        output_interface = ethernet_interfaces.get('output')
+        
+        if config.interface == output_interface:
+            dhcp_success, dhcp_message = update_dhcp_config_for_ip(
+                output_interface, 
+                config.ip_address, 
+                config.netmask
+            )
+            if not dhcp_success:
+                logger.warning(f"Failed to update DHCP configuration: {dhcp_message}")
+        
+        return {
+            "success": True,
+            "message": message,
+            "interface": config.interface,
+            "ip_address": config.ip_address,
+            "netmask": config.netmask,
+            "gateway": config.gateway
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error setting static IP: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/network/static-ip/{interface}")
+async def remove_static_ip_config(interface: str):
+    """Remove static IP configuration for an interface"""
+    try:
+        if not validate_interface_name(interface):
+            raise HTTPException(status_code=404, detail=f"Interface {interface} not found")
+        
+        success, message = remove_static_ip(interface)
+        
+        if not success:
+            raise HTTPException(status_code=400, detail=message)
+        
+        return {
+            "success": True,
+            "message": message,
+            "interface": interface
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error removing static IP: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/network/auto-configure")
+async def auto_configure_first_interface():
+    """Automatically configure the first ethernet interface with static IP 172.22.22.22"""
+    try:
+        first_interface = get_first_ethernet_interface()
+        if not first_interface:
+            raise HTTPException(status_code=404, detail="No ethernet interfaces found")
+        
+        success, message = apply_static_ip(
+            first_interface, 
+            "172.22.22.22", 
+            "255.255.255.0"
+        )
+        
+        if not success:
+            raise HTTPException(status_code=400, detail=message)
+        
+        return {
+            "success": True,
+            "message": f"Auto-configured {first_interface} with IP 172.22.22.22",
+            "interface": first_interface,
+            "ip_address": "172.22.22.22",
+            "netmask": "255.255.255.0"
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error auto-configuring interface: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/traffic")
 async def get_traffic_stats():
@@ -717,6 +874,47 @@ async def get_traffic_stats():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get traffic stats: {str(e)}")
 
+def setup_default_static_ip():
+    """Setup default static IP on OUTPUT ethernet interface at startup"""
+    try:
+        ethernet_interfaces = get_ethernet_interfaces()
+        output_interface = ethernet_interfaces.get('output')
+        
+        if not output_interface:
+            logger.warning("No output ethernet interface found for auto-configuration")
+            return
+        
+        # Check if interface already has our target IP
+        current_ip = get_interface_ip(output_interface)
+        if current_ip == "172.22.22.1":
+            logger.info(f"OUTPUT interface {output_interface} already has target IP 172.22.22.1")
+            return
+        
+        # Check if interface already has static config (user has manually configured)
+        interface_config = get_interface_config(output_interface)
+        if interface_config.get('has_static_config'):
+            logger.info(f"OUTPUT interface {output_interface} already has static configuration - skipping auto-config")
+            return
+        
+        # Apply default static IP configuration to OUTPUT interface
+        logger.info(f"Setting up default static IP 172.22.22.1 on OUTPUT interface {output_interface}")
+        success, message = apply_static_ip(output_interface, "172.22.22.1", "255.255.255.0")
+        
+        if success:
+            logger.info(f"Successfully configured OUTPUT interface {output_interface} with static IP 172.22.22.1")
+            
+            # Update DHCP configuration tied to output interface
+            dhcp_success, dhcp_message = update_dhcp_config_for_ip(output_interface, "172.22.22.1", "255.255.255.0")
+            if dhcp_success:
+                logger.info(f"Updated DHCP configuration: {dhcp_message}")
+            else:
+                logger.warning(f"Failed to update DHCP configuration: {dhcp_message}")
+        else:
+            logger.error(f"Failed to configure static IP: {message}")
+            
+    except Exception as e:
+        logger.error(f"Error during default static IP setup: {e}")
+
 if __name__ == "__main__":
     import uvicorn
     
@@ -729,5 +927,8 @@ if __name__ == "__main__":
         logger.error("Error: 'tc' command not found. Please install iproute2 package.")
         logger.error("Ubuntu/Debian: sudo apt-get install iproute2")
         logger.error("CentOS/RHEL: sudo yum install iproute")
+    
+    # Setup default static IP configuration
+    setup_default_static_ip()
     
     uvicorn.run(app, host=config.HOST, port=config.PORT) 
