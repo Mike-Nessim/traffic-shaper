@@ -188,8 +188,8 @@ def apply_traffic_shaping(config: TrafficShapingConfig):
         if not success:
             return False, f"Failed to create HTB class on {config.interface_in}: {msg}"
         
-        # Filter for download traffic to client network (use detected subnet)
-        cmd = f"tc filter add dev {config.interface_in} protocol ip parent 1: prio 1 u32 match ip dst {dhcp_subnet} flowid 1:1"
+        # Filter for traffic FROM client network to anywhere (use detected subnet)
+        cmd = f"tc filter add dev {config.interface_in} protocol ip parent 1: prio 1 u32 match ip src {dhcp_subnet} flowid 1:1"
         success, msg = execute_command(cmd)
         if not success:
             return False, f"Failed to create download filter on {config.interface_in}: {msg}"
