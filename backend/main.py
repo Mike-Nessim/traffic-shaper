@@ -263,17 +263,15 @@ async def update_config(new_config: TrafficShapingConfig):
     try:
         # Validate configuration
         if new_config.enabled:
-            # Validate delay
+            # Validate delay (numeric input)
             if new_config.delay_ms is not None:
-                valid, msg = validate_delay(new_config.delay_ms)
-                if not valid:
-                    raise HTTPException(status_code=400, detail=msg)
+                if new_config.delay_ms < 0:
+                    raise HTTPException(status_code=400, detail="Delay must be non-negative")
             
-            # Validate bandwidth
+            # Validate bandwidth (numeric input)
             if new_config.bandwidth_mbps is not None:
-                valid, msg = validate_bandwidth(new_config.bandwidth_mbps)
-                if not valid:
-                    raise HTTPException(status_code=400, detail=msg)
+                if new_config.bandwidth_mbps <= 0:
+                    raise HTTPException(status_code=400, detail="Bandwidth must be positive")
             
             # Validate interfaces
             if new_config.interface_in and not validate_interface_name(new_config.interface_in):
