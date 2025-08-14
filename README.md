@@ -49,6 +49,19 @@ A professional network traffic shaping and monitoring solution with a modern web
 
 ## 🏗️ Architecture
 
+### Traffic Flow
+```
+Client Device (172.22.22.x) → enp3s0 (shaped) → enp1s0 (shaped) → Internet
+```
+
+**Components:**
+- **Linux TC (Traffic Control)**: HTB for bandwidth limiting, Netem for latency
+- **Policy Routing**: Forces all client traffic through traffic shaper
+- **DHCP Server**: Auto-assigns IPs and routes clients through shaper
+- **NAT/Masquerading**: Provides internet access to shaped clients
+
+## 🏗️ System Architecture
+
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
 │   React UI      │    │   FastAPI        │    │   Linux TC      │

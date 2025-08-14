@@ -27,6 +27,7 @@ const TrafficControls = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('');
+  const [firstEthernet, setFirstEthernet] = useState('');
 
   useEffect(() => {
     fetchCurrentConfig();
@@ -37,6 +38,8 @@ const TrafficControls = () => {
     try {
       const response = await axios.get('/config');
       setConfig(response.data);
+      // After loading config, check if we need to set default interface
+      await fetchNetworkInfo();
     } catch (error) {
       showMessage('Failed to fetch current configuration', 'error');
     }
@@ -48,6 +51,27 @@ const TrafficControls = () => {
       setInterfaces(Object.values(response.data));
     } catch (error) {
       showMessage('Failed to fetch network interfaces', 'error');
+    }
+  };
+
+  const fetchNetworkInfo = async () => {
+    try {
+      const response = await axios.get('/api/network/interfaces');
+      const firstEth = response.data.first_ethernet;
+      setFirstEthernet(firstEth);
+      
+      // Set first ethernet as default input interface if no interface is currently selected
+      setConfig(prev => {
+        if (firstEth && !prev.interface_in) {
+          return {
+            ...prev,
+            interface_in: firstEth
+          };
+        }
+        return prev;
+      });
+    } catch (error) {
+      console.warn('Could not fetch network info for default interface selection');
     }
   };
 
@@ -242,9 +266,15 @@ const TrafficControls = () => {
                   {interfaces.map((iface) => (
                     <option key={iface.name} value={iface.name}>
                       {iface.name} {iface.stats?.is_up ? '(UP)' : '(DOWN)'}
+                      {iface.name === firstEthernet ? ' (Default)' : ''}
                     </option>
                   ))}
                 </select>
+                {config.interface_in === firstEthernet && (
+                  <small className="form-help" style={{color: '#10b981'}}>
+                    ✓ Using recommended default interface ({firstEthernet})
+                  </small>
+                )}
               </div>
 
               <div className="form-group">

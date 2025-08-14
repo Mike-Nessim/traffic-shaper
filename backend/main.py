@@ -141,6 +141,32 @@ def apply_traffic_shaping(config: TrafficShapingConfig):
     if not config.interface_in or not config.interface_out:
         return False, "Both input and output interfaces must be specified"
     
+    # Get the output interface subnet for traffic filtering
+    try:
+        result = subprocess.run(['ip', 'addr', 'show', config.interface_out], 
+                              capture_output=True, text=True)
+        if result.returncode == 0:
+            # Extract subnet from output (e.g., "172.22.22.1/24" -> "172.22.22.0/24")
+            import re
+            match = re.search(r'inet (\d+\.\d+\.\d+\.\d+)/(\d+)', result.stdout)
+            if match:
+                ip = match.group(1)
+                prefix = match.group(2)
+                # Calculate network address
+                import ipaddress
+                network = ipaddress.IPv4Network(f"{ip}/{prefix}", strict=False)
+                dhcp_subnet = str(network)
+                logger.info(f"Detected DHCP subnet: {dhcp_subnet}")
+            else:
+                dhcp_subnet = "172.22.22.0/24"  # fallback
+                logger.warning(f"Could not detect subnet, using fallback: {dhcp_subnet}")
+        else:
+            dhcp_subnet = "172.22.22.0/24"  # fallback
+            logger.warning(f"Could not get interface info, using fallback: {dhcp_subnet}")
+    except Exception as e:
+        dhcp_subnet = "172.22.22.0/24"  # fallback
+        logger.error(f"Error detecting subnet: {e}, using fallback: {dhcp_subnet}")
+    
     # Clear existing rules
     clear_traffic_shaping(config.interface_in)
     clear_traffic_shaping(config.interface_out)
@@ -162,8 +188,8 @@ def apply_traffic_shaping(config: TrafficShapingConfig):
         if not success:
             return False, f"Failed to create HTB class on {config.interface_in}: {msg}"
         
-        # Filter for download traffic to client network
-        cmd = f"tc filter add dev {config.interface_in} protocol ip parent 1: prio 1 u32 match ip dst 192.168.100.0/24 flowid 1:1"
+        # Filter for download traffic to client network (use detected subnet)
+        cmd = f"tc filter add dev {config.interface_in} protocol ip parent 1: prio 1 u32 match ip dst {dhcp_subnet} flowid 1:1"
         success, msg = execute_command(cmd)
         if not success:
             return False, f"Failed to create download filter on {config.interface_in}: {msg}"

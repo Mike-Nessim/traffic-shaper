@@ -179,6 +179,7 @@ install_system_dependencies() {
         "curl"
         "bc"
         "git"
+        "iptables-persistent"
     )
     
     for package in "${PACKAGES[@]}"; do
@@ -317,6 +318,97 @@ EOF
     # Enable and start dnsmasq
     systemctl enable dnsmasq
     systemctl restart dnsmasq
+    
+    # Enable IP forwarding
+    info "Enabling IP forwarding..."
+    echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
+    sysctl -p
+    
+    # Set up NAT and forwarding rules
+    info "Configuring iptables NAT and forwarding rules..."
+    
+    # Add NAT masquerade rule for DHCP subnet
+    iptables -t nat -A POSTROUTING -s 172.22.22.0/24 -o $INPUT_INTERFACE -j MASQUERADE
+    
+    # Add forwarding rules
+    iptables -A FORWARD -i $OUTPUT_INTERFACE -o $INPUT_INTERFACE -j ACCEPT
+    iptables -A FORWARD -i $INPUT_INTERFACE -o $OUTPUT_INTERFACE -m state --state RELATED,ESTABLISHED -j ACCEPT
+    
+    # Save iptables rules
+    mkdir -p /etc/iptables
+    iptables-save > /etc/iptables/rules.v4
+    
+    # Set up policy routing for traffic shaping
+    info "Configuring policy routing for traffic shaping..."
+    
+    # Create routing table 100 for DHCP clients
+    # Get gateway IP for input interface
+    GATEWAY_IP=$(ip route show dev $INPUT_INTERFACE | grep -o 'src [0-9.]*' | cut -d' ' -f2 | head -1)
+    if [ -n "$GATEWAY_IP" ]; then
+        # Extract network portion (assumes /24)
+        NETWORK_GATEWAY=$(echo "$GATEWAY_IP" | cut -d'.' -f1-3).1
+        
+        # Add routes to table 100
+        ip route add default via $NETWORK_GATEWAY dev $INPUT_INTERFACE table 100 2>/dev/null || true
+        ip route add $(echo "$GATEWAY_IP" | cut -d'.' -f1-3).0/24 dev $INPUT_INTERFACE table 100 2>/dev/null || true
+        
+        # Add routing rule for DHCP clients
+        ip rule add from 172.22.22.0/24 table 100 2>/dev/null || true
+        
+        info "Policy routing configured with gateway $NETWORK_GATEWAY"
+    else
+        warn "Could not automatically detect gateway IP for $INPUT_INTERFACE"
+    fi
+    
+    # Change server's default route to use traffic-shaped interface
+    info "Configuring server default route through traffic-shaped interface..."
+    
+    # Remove any existing default routes through output interface
+    ip route del default dev $OUTPUT_INTERFACE 2>/dev/null || true
+    
+    # Add default route through input interface (traffic-shaped path)
+    if [ -n "$NETWORK_GATEWAY" ]; then
+        ip route add default via $NETWORK_GATEWAY dev $INPUT_INTERFACE 2>/dev/null || true
+        info "Server default route set to $NETWORK_GATEWAY via $INPUT_INTERFACE"
+    fi
+    
+    # Create a service to restore routing rules on boot
+    info "Creating service to restore routing rules on boot..."
+    
+    cat > "/etc/systemd/system/traffic-shaper-routing.service" << EOF
+[Unit]
+Description=Traffic Shaper Routing Configuration
+After=network.target
+Before=traffic-shaper-backend.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/bash -c '
+    # Restore policy routing
+    ip rule add from 172.22.22.0/24 table 100 2>/dev/null || true
+    
+    # Get current gateway for input interface
+    GATEWAY_IP=\$(ip route show dev $INPUT_INTERFACE | grep -o "src [0-9.]*" | cut -d" " -f2 | head -1)
+    if [ -n "\$GATEWAY_IP" ]; then
+        NETWORK_GATEWAY=\$(echo "\$GATEWAY_IP" | cut -d"." -f1-3).1
+        
+        # Restore routing table 100
+        ip route add default via \$NETWORK_GATEWAY dev $INPUT_INTERFACE table 100 2>/dev/null || true
+        ip route add \$(echo "\$GATEWAY_IP" | cut -d"." -f1-3).0/24 dev $INPUT_INTERFACE table 100 2>/dev/null || true
+        
+        # Ensure server uses traffic-shaped default route
+        ip route del default dev $OUTPUT_INTERFACE 2>/dev/null || true
+        ip route add default via \$NETWORK_GATEWAY dev $INPUT_INTERFACE 2>/dev/null || true
+    fi
+'
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    
+    # Enable the routing service
+    systemctl enable traffic-shaper-routing
     
     info "Network configuration completed"
 }

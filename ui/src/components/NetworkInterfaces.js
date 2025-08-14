@@ -8,20 +8,39 @@ import {
   AlertCircle,
   CheckCircle,
   Settings,
-  Activity
+  Activity,
+  Edit3,
+  Save,
+  X,
+  Globe
 } from 'lucide-react';
 import axios from 'axios';
 import './Components.css';
+import './NetworkInterfaces.css';
 
 const NetworkInterfaces = () => {
   const [interfaces, setInterfaces] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedInterface, setSelectedInterface] = useState(null);
+  const [networkInterfaces, setNetworkInterfaces] = useState({});
+  const [editingInterface, setEditingInterface] = useState(null);
+  const [ipForm, setIpForm] = useState({
+    ip_address: '',
+    netmask: '255.255.255.0',
+    gateway: ''
+  });
+  const [configuring, setConfiguring] = useState(false);
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('');
 
   useEffect(() => {
     fetchInterfaces();
-    const interval = setInterval(fetchInterfaces, 15000); // Update every 15 seconds
+    fetchNetworkInterfaces();
+    const interval = setInterval(() => {
+      fetchInterfaces();
+      fetchNetworkInterfaces();
+    }, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -36,6 +55,94 @@ const NetworkInterfaces = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchNetworkInterfaces = async () => {
+    try {
+      const response = await axios.get('/api/network/interfaces');
+      setNetworkInterfaces(response.data.interfaces);
+      // Store input/output interface info for UI logic
+      window.ethernetInterfaces = {
+        input: response.data.input_interface,
+        output: response.data.output_interface
+      };
+    } catch (error) {
+      console.warn('Could not fetch detailed network interface data');
+    }
+  };
+
+  const showMessage = (text, type) => {
+    setMessage(text);
+    setMessageType(type);
+    setTimeout(() => {
+      setMessage('');
+      setMessageType('');
+    }, 5000);
+  };
+
+  const handleEditIP = (interfaceName) => {
+    const netInterface = networkInterfaces[interfaceName];
+    setEditingInterface(interfaceName);
+    setIpForm({
+      ip_address: netInterface?.ip_address || '',
+      netmask: '255.255.255.0',
+      gateway: ''
+    });
+  };
+
+  const handleSaveIP = async () => {
+    if (!editingInterface) return;
+    
+    setConfiguring(true);
+    try {
+      const config = {
+        interface: editingInterface,
+        ip_address: ipForm.ip_address,
+        netmask: ipForm.netmask,
+        gateway: ipForm.gateway || undefined
+      };
+      
+      const response = await axios.post('/api/network/static-ip', config);
+      showMessage(response.data.message, 'success');
+      setEditingInterface(null);
+      
+      // Refresh data
+      setTimeout(() => {
+        fetchInterfaces();
+        fetchNetworkInterfaces();
+      }, 2000);
+      
+    } catch (error) {
+      const errorMsg = error.response?.data?.detail || 'Failed to configure IP address';
+      showMessage(errorMsg, 'error');
+    } finally {
+      setConfiguring(false);
+    }
+  };
+
+  const handleRemoveStaticIP = async (interfaceName) => {
+    setConfiguring(true);
+    try {
+      const response = await axios.delete(`/api/network/static-ip/${interfaceName}`);
+      showMessage(response.data.message, 'success');
+      
+      // Refresh data
+      setTimeout(() => {
+        fetchInterfaces();
+        fetchNetworkInterfaces();
+      }, 2000);
+      
+    } catch (error) {
+      const errorMsg = error.response?.data?.detail || 'Failed to remove static IP configuration';
+      showMessage(errorMsg, 'error');
+    } finally {
+      setConfiguring(false);
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingInterface(null);
+    setIpForm({ ip_address: '', netmask: '255.255.255.0', gateway: '' });
   };
 
   const getInterfaceIcon = (isUp) => {
@@ -91,7 +198,10 @@ const NetworkInterfaces = () => {
       <div className="interfaces-header">
         <h2 className="section-title">Network Interfaces</h2>
         <button 
-          onClick={fetchInterfaces} 
+          onClick={() => {
+            fetchInterfaces();
+            fetchNetworkInterfaces();
+          }} 
           className="btn btn-secondary"
           disabled={loading}
         >
@@ -99,6 +209,13 @@ const NetworkInterfaces = () => {
           Refresh
         </button>
       </div>
+
+      {message && (
+        <div className={`alert ${messageType === 'error' ? 'alert-error' : 'alert-success'} animate-slideIn`}>
+          {messageType === 'error' ? <AlertCircle size={16} /> : <CheckCircle size={16} />}
+          {message}
+        </div>
+      )}
 
       <div className="interfaces-layout">
         {/* Interface List */}
@@ -212,6 +329,130 @@ const NetworkInterfaces = () => {
                       </span>
                     </div>
                   </div>
+                </div>
+
+                {/* IP Configuration Section */}
+                <div className="detail-section">
+                  <div className="detail-section-header">
+                    <h4 className="detail-section-title">
+                      <Globe size={16} />
+                      IP Configuration
+                    </h4>
+                    {networkInterfaces[selectedInterface] && (
+                      <div className="detail-section-actions">
+                        {editingInterface === selectedInterface ? (
+                          <div className="edit-actions">
+                            <button
+                              onClick={handleSaveIP}
+                              disabled={configuring || !ipForm.ip_address}
+                              className="btn btn-primary btn-sm"
+                            >
+                              <Save size={14} />
+                              Save
+                            </button>
+                            <button
+                              onClick={cancelEdit}
+                              disabled={configuring}
+                              className="btn btn-secondary btn-sm"
+                            >
+                              <X size={14} />
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleEditIP(selectedInterface)}
+                            disabled={configuring}
+                            className="btn btn-secondary btn-sm"
+                          >
+                            <Edit3 size={14} />
+                            Edit IP
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {editingInterface === selectedInterface ? (
+                    <div className="ip-edit-form">
+                      <div className="form-group">
+                        <label className="form-label">IP Address</label>
+                        <input
+                          type="text"
+                          value={ipForm.ip_address}
+                          onChange={(e) => setIpForm({...ipForm, ip_address: e.target.value})}
+                          className="form-input"
+                          placeholder="192.168.1.100"
+                          disabled={configuring}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Subnet Mask</label>
+                        <input
+                          type="text"
+                          value={ipForm.netmask}
+                          onChange={(e) => setIpForm({...ipForm, netmask: e.target.value})}
+                          className="form-input"
+                          placeholder="255.255.255.0"
+                          disabled={configuring}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Gateway (Optional)</label>
+                        <input
+                          type="text"
+                          value={ipForm.gateway}
+                          onChange={(e) => setIpForm({...ipForm, gateway: e.target.value})}
+                          className="form-input"
+                          placeholder="192.168.1.1"
+                          disabled={configuring}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="detail-grid">
+                      {networkInterfaces[selectedInterface] ? (
+                        <>
+                          <div className="detail-item">
+                            <span className="detail-label">IP Address:</span>
+                            <span className="detail-value">
+                              {networkInterfaces[selectedInterface].ip_address || 'Not configured'}
+                            </span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Status:</span>
+                            <span className={`detail-value ${networkInterfaces[selectedInterface].has_static_config ? 'text-blue-600' : 'text-gray-600'}`}>
+                              {networkInterfaces[selectedInterface].has_static_config ? 'Static IP' : 'DHCP/Auto'}
+                            </span>
+                          </div>
+                          {networkInterfaces[selectedInterface].has_static_config && 
+                           window.ethernetInterfaces && 
+                           selectedInterface === window.ethernetInterfaces.input && (
+                            <div className="detail-item" style={{gridColumn: '1 / -1'}}>
+                              <button
+                                onClick={() => handleRemoveStaticIP(selectedInterface)}
+                                disabled={configuring}
+                                className="btn btn-warning btn-sm"
+                              >
+                                Switch to DHCP
+                              </button>
+                            </div>
+                          )}
+                          {window.ethernetInterfaces && 
+                           selectedInterface === window.ethernetInterfaces.output && (
+                            <div className="detail-item" style={{gridColumn: '1 / -1', fontSize: '0.9em', color: '#666'}}>
+                              <Info size={16} style={{marginRight: '8px'}} />
+                              Output interface is always configured with static IP for traffic shaping and DHCP server.
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="detail-item">
+                          <span className="detail-label">Loading...</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* IP Addresses */}
